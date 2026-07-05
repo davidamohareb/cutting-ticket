@@ -1,6 +1,6 @@
 // sw.js — caches the app shell so it opens instantly and works offline.
 // App DATA lives in IndexedDB (see storage.js), never in this cache.
-const CACHE_NAME = "cutting-ticket-shell-v1";
+const CACHE_NAME = "cutting-ticket-shell-v2";
 const SHELL_FILES = [
   "./",
   "./index.html",
