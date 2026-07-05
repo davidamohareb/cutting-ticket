@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+  <title>The Cutting Ticket</title>
+  <meta name="description" content="Leather goods pricing, inventory, orders, and budgets." />
+  <meta name="theme-color" content="#2C1F12" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Cutting Ticket" />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="icon" href="icon-192.png" />
+  <link rel="apple-touch-icon" href="icon-192.png" />
+  <style>
+    html, body { margin: 0; padding: 0; background: #E7DAC2; }
+    #root { min-height: 100vh; }
+    #boot-msg {
+      font-family: -apple-system, 'Segoe UI', Arial, sans-serif;
+      color: #5C4A35;
+      text-align: center;
+      padding: 60px 20px;
+    }
+  </style>
+</head>
+<body>
+  <div id="root"><div id="boot-msg">Loading The Cutting Ticket…</div></div>
+
+  <script src="react.production.min.js"></script>
+  <script src="react-dom.production.min.js"></script>
+  <script src="storage.js"></script>
+  <script src="app.js"></script>
+  <script>
+    const root = ReactDOM.createRoot(document.getElementById("root"));
+    root.render(React.createElement(App));
+
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", () => {
+        navigator.serviceWorker.register("sw.js").catch(() => {
+          /* offline support just won't be available; app still works online */
+        });
+      });
+    }
+  </script>
+</body>
+</html>
