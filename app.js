@@ -533,7 +533,17 @@ function LeatherTab({
       display: "grid",
       gap: 16
     }
-  }, /*#__PURE__*/React.createElement(Card, null, /*#__PURE__*/React.createElement(SectionTitle, null, "Add a leather"), /*#__PURE__*/React.createElement("div", {
+  }, /*#__PURE__*/React.createElement(RestockCard, {
+    unit: "ft²",
+    lines: data.leathers.flatMap(l => (l.colors || []).filter(c => isLow(c.stockFt, c.minFt)).map(c => ({
+      name: `${l.name} — ${c.name}`,
+      stock: num(c.stockFt),
+      min: num(c.minFt),
+      max: num(c.maxFt) > num(c.minFt) ? num(c.maxFt) : 0,
+      buy: restockAmount(c.stockFt, c.minFt, c.maxFt),
+      price: num(l.pricePerFt)
+    })))
+  }), /*#__PURE__*/React.createElement(Card, null, /*#__PURE__*/React.createElement(SectionTitle, null, "Add a leather"), /*#__PURE__*/React.createElement("div", {
     style: {
       display: "flex",
       gap: 10,
@@ -605,6 +615,69 @@ function LeatherTab({
     })
   })))));
 }
+
+// Low-stock check: min must be set (>0) and stock at or below it
+function isLow(stock, min) {
+  return num(min) > 0 && num(stock) <= num(min);
+}
+// How much to buy: up to max if set above min, otherwise up to min
+function restockAmount(stock, min, max) {
+  const target = num(max) > num(min) ? num(max) : num(min);
+  return Math.max(0, Math.round((target - num(stock)) * 100) / 100);
+}
+function LowBadge() {
+  return /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 11,
+      fontWeight: 700,
+      color: "#fff",
+      background: T.danger,
+      borderRadius: 6,
+      padding: "3px 7px",
+      whiteSpace: "nowrap"
+    }
+  }, "⚠ Low");
+}
+function RestockCard({
+  lines,
+  unit
+}) {
+  if (lines.length === 0) return null;
+  const total = lines.reduce((s, ln) => s + ln.buy * ln.price, 0);
+  return /*#__PURE__*/React.createElement(Card, {
+    style: {
+      borderColor: T.danger
+    }
+  }, /*#__PURE__*/React.createElement(SectionTitle, null, "⚠ Restock needed"), lines.map((ln, i) => /*#__PURE__*/React.createElement("div", {
+    key: i,
+    style: {
+      display: "flex",
+      justifyContent: "space-between",
+      gap: 10,
+      padding: "5px 0",
+      borderBottom: `1px dashed ${T.line}`,
+      fontSize: 13,
+      flexWrap: "wrap"
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontWeight: 600
+    }
+  }, ln.name), /*#__PURE__*/React.createElement("span", {
+    style: {
+      color: T.danger
+    }
+  }, ln.stock, " ", unit, " left (min ", ln.min, ") → buy ", ln.buy, " ", unit, ln.max ? ` to reach ${ln.max}` : "", " (~", egp(ln.buy * ln.price), ")"))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      marginTop: 8,
+      fontSize: 13
+    }
+  }, "Total to restock: ", /*#__PURE__*/React.createElement("strong", {
+    style: {
+      color: T.accent
+    }
+  }, "~", egp(total))));
+}
 function ColorStock({
   leather,
   onChange
@@ -636,7 +709,7 @@ function ColorStock({
     }
   }, /*#__PURE__*/React.createElement(Field, {
     label: "Color name",
-    flex: "2 1 130px"
+    flex: "2 1 120px"
   }, /*#__PURE__*/React.createElement("input", {
     style: {
       ...inputStyle,
@@ -650,7 +723,7 @@ function ColorStock({
     } : x))
   })), /*#__PURE__*/React.createElement(Field, {
     label: "Stock (ft²)",
-    flex: "0 1 90px"
+    flex: "0 1 80px"
   }, /*#__PURE__*/React.createElement("input", {
     style: {
       ...inputStyle,
@@ -665,7 +738,41 @@ function ColorStock({
       ...x,
       stockFt: e.target.value
     } : x))
-  })), /*#__PURE__*/React.createElement(ConfirmBtn, {
+  })), /*#__PURE__*/React.createElement(Field, {
+    label: "Min",
+    flex: "0 1 65px"
+  }, /*#__PURE__*/React.createElement("input", {
+    style: {
+      ...inputStyle,
+      fontSize: 13,
+      padding: "6px 8px"
+    },
+    type: "number",
+    step: "0.5",
+    min: "0",
+    value: c.minFt || "",
+    onChange: e => onChange(colors.map(x => x.id === c.id ? {
+      ...x,
+      minFt: e.target.value
+    } : x))
+  })), /*#__PURE__*/React.createElement(Field, {
+    label: "Max",
+    flex: "0 1 65px"
+  }, /*#__PURE__*/React.createElement("input", {
+    style: {
+      ...inputStyle,
+      fontSize: 13,
+      padding: "6px 8px"
+    },
+    type: "number",
+    step: "0.5",
+    min: "0",
+    value: c.maxFt || "",
+    onChange: e => onChange(colors.map(x => x.id === c.id ? {
+      ...x,
+      maxFt: e.target.value
+    } : x))
+  })), isLow(c.stockFt, c.minFt) && /*#__PURE__*/React.createElement(LowBadge, null), /*#__PURE__*/React.createElement(ConfirmBtn, {
     small: true,
     onConfirm: () => onChange(colors.filter(x => x.id !== c.id))
   }, "✕"))), /*#__PURE__*/React.createElement("div", {
@@ -725,7 +832,17 @@ function AccessoryTab({
       display: "grid",
       gap: 16
     }
-  }, /*#__PURE__*/React.createElement(Card, null, /*#__PURE__*/React.createElement(SectionTitle, null, "Add an accessory"), /*#__PURE__*/React.createElement("div", {
+  }, /*#__PURE__*/React.createElement(RestockCard, {
+    unit: "pcs",
+    lines: data.accessories.filter(a => isLow(a.stockQty, a.minQty)).map(a => ({
+      name: a.name,
+      stock: num(a.stockQty),
+      min: num(a.minQty),
+      max: num(a.maxQty) > num(a.minQty) ? num(a.maxQty) : 0,
+      buy: restockAmount(a.stockQty, a.minQty, a.maxQty),
+      price: num(a.unitPrice)
+    }))
+  }), /*#__PURE__*/React.createElement(Card, null, /*#__PURE__*/React.createElement(SectionTitle, null, "Add an accessory"), /*#__PURE__*/React.createElement("div", {
     style: {
       display: "flex",
       gap: 10,
@@ -759,8 +876,18 @@ function AccessoryTab({
       color: T.inkSoft,
       fontSize: 14
     }
-  }, "No accessories yet. Add zippers, snaps, rings, thread spools — anything you buy per unit."), data.accessories.map(a => /*#__PURE__*/React.createElement(EditableRow, {
+  }, "No accessories yet. Add zippers, snaps, rings, thread spools — anything you buy per unit."), data.accessories.map(a => /*#__PURE__*/React.createElement("div", {
     key: a.id,
+    style: {
+      display: "flex",
+      alignItems: "center",
+      gap: 8
+    }
+  }, isLow(a.stockQty, a.minQty) && /*#__PURE__*/React.createElement(LowBadge, null), /*#__PURE__*/React.createElement("div", {
+    style: {
+      flex: 1
+    }
+  }, /*#__PURE__*/React.createElement(EditableRow, {
     fields: [{
       key: "name",
       value: a.name,
@@ -775,19 +902,31 @@ function AccessoryTab({
       value: a.stockQty || 0,
       type: "number",
       suffix: "in stock"
+    }, {
+      key: "minQty",
+      value: a.minQty || 0,
+      type: "number",
+      suffix: "min"
+    }, {
+      key: "maxQty",
+      value: a.maxQty || 0,
+      type: "number",
+      suffix: "max"
     }],
     onSave: vals => update({
       accessories: data.accessories.map(x => x.id === a.id ? {
         ...x,
         name: vals.name,
         unitPrice: num(vals.unitPrice),
-        stockQty: num(vals.stockQty)
+        stockQty: num(vals.stockQty),
+        minQty: num(vals.minQty),
+        maxQty: num(vals.maxQty)
       } : x)
     }),
     onDelete: () => update({
       accessories: data.accessories.filter(x => x.id !== a.id)
     })
-  }))));
+  }))))));
 }
 function EditableRow({
   fields,
@@ -1939,6 +2078,7 @@ function OrdersTab({
   });
   const itemById = id => data.items.find(i => i.id === id);
   const [view, setView] = useState("active");
+  const [oKind, setOKind] = useState("customer");
   const [oItem, setOItem] = useState(data.items[0]?.id || "");
   const [oName, setOName] = useState("");
   const [oMobile, setOMobile] = useState("");
@@ -2009,18 +2149,20 @@ function OrdersTab({
     cutAt: undefined
   });
   const addOrder = () => {
-    if (!oItem || !oName.trim()) return;
+    if (!oItem) return;
+    if (oKind === "customer" && !oName.trim()) return;
     const it = itemById(oItem);
     setOrders([...orders, {
       id: uid(),
+      kind: oKind,
       itemId: oItem,
       itemName: it ? it.name : "",
-      customer: oName.trim(),
-      mobile: oMobile.trim(),
-      address: oAddress.trim(),
+      customer: oKind === "personal" ? "Personal / testing" : oName.trim(),
+      mobile: oKind === "personal" ? "" : oMobile.trim(),
+      address: oKind === "personal" ? "" : oAddress.trim(),
       notes: oNotes.trim(),
       deliveryDate: oDelivery,
-      deposit: num(oDeposit),
+      deposit: oKind === "personal" ? 0 : num(oDeposit),
       colorChoices: it ? resolveChoices(it, oColors) : {},
       status: "in_progress",
       createdAt: new Date().toISOString()
@@ -2032,6 +2174,49 @@ function OrdersTab({
     setODelivery("");
     setODeposit("");
     setOColors({});
+  };
+
+  // Personal orders finish without touching the budgets
+  const markDone = o => {
+    const it = itemById(o.itemId);
+    const soldAt = new Date().toISOString();
+    let newLeathers = data.leathers;
+    let newAccessories = data.accessories;
+    let cutPatch = {};
+    if (!o.cutAt && it) {
+      const agg = aggregateByColor(it, resolveChoices(it, o.colorChoices));
+      newLeathers = data.leathers.map(l => {
+        if (!agg[l.id]) return l;
+        return {
+          ...l,
+          colors: (l.colors || []).map(cc => agg[l.id][cc.id] ? {
+            ...cc,
+            stockFt: Math.round((num(cc.stockFt) - agg[l.id][cc.id]) * 1000) / 1000
+          } : cc)
+        };
+      });
+      const accNeeds = {};
+      (it.accessories || []).forEach(a => {
+        accNeeds[a.accessoryId] = (accNeeds[a.accessoryId] || 0) + (num(a.qty) || 1);
+      });
+      newAccessories = data.accessories.map(acc => accNeeds[acc.id] ? {
+        ...acc,
+        stockQty: num(acc.stockQty) - accNeeds[acc.id]
+      } : acc);
+      cutPatch = {
+        cutAt: soldAt
+      };
+    }
+    update({
+      leathers: newLeathers,
+      accessories: newAccessories,
+      orders: orders.map(x => x.id === o.id ? {
+        ...x,
+        ...cutPatch,
+        status: "done",
+        soldAt
+      } : x)
+    });
   };
   const startSell = o => {
     const it = itemById(o.itemId);
@@ -2118,10 +2303,11 @@ function OrdersTab({
     return s + (it ? num(it.hoursNeeded) : 0);
   }, 0);
   const sold = orders.filter(o => o.status === "done").sort((a, b) => (b.soldAt || "").localeCompare(a.soldAt || ""));
+  const soldToCustomers = sold.filter(o => o.kind !== "personal");
 
-  // Per-model summary
+  // Per-model summary (customer sales only — personal builds carry no money)
   const groups = {};
-  sold.forEach(o => {
+  soldToCustomers.forEach(o => {
     const key = o.itemId || o.itemName;
     const it = itemById(o.itemId);
     if (!groups[key]) groups[key] = {
@@ -2133,7 +2319,8 @@ function OrdersTab({
     groups[key].total += num(o.soldPrice);
   });
   const summary = Object.values(groups).sort((a, b) => b.count - a.count);
-  const totalSold = sold.reduce((s, o) => s + num(o.soldPrice), 0);
+  const totalSold = soldToCustomers.reduce((s, o) => s + num(o.soldPrice), 0);
+  const personalDoneCount = sold.length - soldToCustomers.length;
   const dateStr = iso => iso ? new Date(iso).toLocaleDateString("en-GB") : "";
   return /*#__PURE__*/React.createElement("div", {
     style: {
@@ -2284,6 +2471,17 @@ function OrdersTab({
       flexWrap: "wrap"
     }
   }, /*#__PURE__*/React.createElement(Field, {
+    label: "This order is for",
+    flex: "1 1 160px"
+  }, /*#__PURE__*/React.createElement("select", {
+    style: inputStyle,
+    value: oKind,
+    onChange: e => setOKind(e.target.value)
+  }, /*#__PURE__*/React.createElement("option", {
+    value: "customer"
+  }, "A customer"), /*#__PURE__*/React.createElement("option", {
+    value: "personal"
+  }, "Myself / testing"))), /*#__PURE__*/React.createElement(Field, {
     label: "Item",
     flex: "2 1 180px"
   }, /*#__PURE__*/React.createElement("select", {
@@ -2299,7 +2497,13 @@ function OrdersTab({
       key: i.id,
       value: i.id
     }, i.name, " — ", Math.round(p), " EGP");
-  }))), /*#__PURE__*/React.createElement(Field, {
+  })))), oKind === "customer" && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      gap: 10,
+      flexWrap: "wrap"
+    }
+  }, /*#__PURE__*/React.createElement(Field, {
     label: "Customer name",
     flex: "2 1 160px"
   }, /*#__PURE__*/React.createElement("input", {
@@ -2321,21 +2525,21 @@ function OrdersTab({
     style: inputStyle,
     value: oAddress,
     onChange: e => setOAddress(e.target.value)
-  })), /*#__PURE__*/React.createElement("div", {
+  }))), /*#__PURE__*/React.createElement("div", {
     style: {
       display: "flex",
       gap: 10,
       flexWrap: "wrap"
     }
   }, /*#__PURE__*/React.createElement(Field, {
-    label: "Delivery date",
+    label: oKind === "personal" ? "Target date (optional)" : "Delivery date",
     flex: "1 1 150px"
   }, /*#__PURE__*/React.createElement("input", {
     style: inputStyle,
     type: "date",
     value: oDelivery,
     onChange: e => setODelivery(e.target.value)
-  })), /*#__PURE__*/React.createElement(Field, {
+  })), oKind === "customer" && /*#__PURE__*/React.createElement(Field, {
     label: "Deposit paid (EGP)",
     flex: "1 1 150px"
   }, /*#__PURE__*/React.createElement("input", {
@@ -2345,7 +2549,13 @@ function OrdersTab({
     value: oDeposit,
     onChange: e => setODeposit(e.target.value),
     placeholder: "0"
-  }))), oItem && itemById(oItem) && pieceNeedsList(itemById(oItem)).length > 0 && /*#__PURE__*/React.createElement(ColorChooser, {
+  }))), oKind === "personal" && /*#__PURE__*/React.createElement("p", {
+    style: {
+      fontSize: 12,
+      color: T.inkSoft,
+      margin: 0
+    }
+  }, "Personal orders use your inventory (leather and accessories are deducted when you cut), but no money is recorded in the budgets."), oItem && itemById(oItem) && pieceNeedsList(itemById(oItem)).length > 0 && /*#__PURE__*/React.createElement(ColorChooser, {
     item: itemById(oItem),
     leathers: data.leathers,
     choices: resolveChoices(itemById(oItem), oColors),
@@ -2472,7 +2682,7 @@ function OrdersTab({
         ...x,
         deliveryDate: e.target.value
       } : x))
-    })), /*#__PURE__*/React.createElement(Field, {
+    })), o.kind !== "personal" && /*#__PURE__*/React.createElement(Field, {
       label: "Deposit (EGP)",
       flex: "0 1 110px"
     }, /*#__PURE__*/React.createElement("input", {
@@ -2488,7 +2698,7 @@ function OrdersTab({
         ...x,
         deposit: e.target.value
       } : x))
-    })), num(o.deposit) > 0 && it && /*#__PURE__*/React.createElement("span", {
+    })), o.kind !== "personal" && num(o.deposit) > 0 && it && /*#__PURE__*/React.createElement("span", {
       style: {
         fontSize: 12,
         color: T.inkSoft,
@@ -2529,7 +2739,17 @@ function OrdersTab({
         padding: "4px 8px",
         textAlign: "center"
       }
-    }, "In progress"), it && Object.keys(leatherNeedsFt(it)).length > 0 && (o.cutAt ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("span", {
+    }, "In progress"), o.kind === "personal" && /*#__PURE__*/React.createElement("span", {
+      style: {
+        fontSize: 12,
+        fontWeight: 700,
+        color: T.inkSoft,
+        border: `1.5px solid ${T.line}`,
+        borderRadius: 6,
+        padding: "4px 8px",
+        textAlign: "center"
+      }
+    }, "Personal / testing"), it && Object.keys(leatherNeedsFt(it)).length > 0 && (o.cutAt ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("span", {
       style: {
         fontSize: 12,
         fontWeight: 700,
@@ -2568,7 +2788,10 @@ function OrdersTab({
           textAlign: "center"
         }
       }, "Not enough stock (leather color or accessories)!"));
-    })()), sellId === o.id ? /*#__PURE__*/React.createElement("div", {
+    })()), o.kind === "personal" ? /*#__PURE__*/React.createElement(Btn, {
+      small: true,
+      onClick: () => markDone(o)
+    }, "✓ Mark as done") : sellId === o.id ? /*#__PURE__*/React.createElement("div", {
       style: {
         display: "grid",
         gap: 6
@@ -2631,7 +2854,13 @@ function OrdersTab({
     style: {
       color: T.accent
     }
-  }, sold.length, " items · ", egp(totalSold))))), sold.map(o => {
+  }, soldToCustomers.length, " items · ", egp(totalSold))), personalDoneCount > 0 && /*#__PURE__*/React.createElement("p", {
+    style: {
+      fontSize: 12,
+      color: T.inkSoft,
+      margin: "6px 0 0"
+    }
+  }, "Plus ", personalDoneCount, " personal/testing build", personalDoneCount > 1 ? "s" : "", " (not counted in sales)."))), sold.map(o => {
     const it = itemById(o.itemId);
     const discount = num(o.listPrice) - num(o.soldPrice);
     return /*#__PURE__*/React.createElement(Card, {
@@ -2673,7 +2902,7 @@ function OrdersTab({
         fontSize: 12,
         color: T.inkSoft
       }
-    }, "Sold ", dateStr(o.soldAt)), o.notes && /*#__PURE__*/React.createElement("span", {
+    }, o.kind === "personal" ? "Finished" : "Sold", " ", dateStr(o.soldAt)), o.notes && /*#__PURE__*/React.createElement("span", {
       style: {
         fontSize: 12,
         color: T.inkSoft
@@ -2684,7 +2913,17 @@ function OrdersTab({
         gap: 4,
         textAlign: "right"
       }
-    }, /*#__PURE__*/React.createElement("span", {
+    }, o.kind === "personal" ? /*#__PURE__*/React.createElement("span", {
+      style: {
+        fontSize: 12,
+        fontWeight: 700,
+        color: T.inkSoft,
+        border: `1.5px solid ${T.line}`,
+        borderRadius: 6,
+        padding: "4px 8px",
+        justifySelf: "end"
+      }
+    }, "Personal / testing") : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("span", {
       style: {
         fontFamily: fontDisplay,
         fontWeight: 800,
@@ -2701,7 +2940,7 @@ function OrdersTab({
         fontSize: 12,
         color: T.inkSoft
       }
-    }, "Deposit ", egp(num(o.deposit)), " · rest ", egp(Math.max(0, num(o.soldPrice) - num(o.deposit)))), /*#__PURE__*/React.createElement(Btn, {
+    }, "Deposit ", egp(num(o.deposit)), " · rest ", egp(Math.max(0, num(o.soldPrice) - num(o.deposit))))), /*#__PURE__*/React.createElement(Btn, {
       small: true,
       kind: "outline",
       onClick: () => update({
@@ -2714,10 +2953,10 @@ function OrdersTab({
         } : x),
         budgetTx: (data.budgetTx || []).filter(t => t.orderId !== o.id)
       })
-    }, "Undo sale"))));
+    }, o.kind === "personal" ? "Undo" : "Undo sale"))));
   })), view === "customers" && (() => {
     const groups = {};
-    orders.forEach(o => {
+    orders.filter(o => o.kind !== "personal").forEach(o => {
       const key = (o.mobile || "").trim() || `name:${(o.customer || "").trim().toLowerCase()}`;
       if (!groups[key]) groups[key] = {
         name: o.customer,
